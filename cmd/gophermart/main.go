@@ -5,8 +5,8 @@ import (
 	"github.com/divanov-web/gophermart/internal/config"
 	"github.com/divanov-web/gophermart/internal/handlers"
 	"github.com/divanov-web/gophermart/internal/middleware"
+	"github.com/divanov-web/gophermart/internal/repository"
 	"github.com/divanov-web/gophermart/internal/service"
-	"github.com/divanov-web/gophermart/internal/storage/pgstorage"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 	"net/http"
@@ -34,20 +34,16 @@ func main() {
 	//context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	_ = ctx
 
-	pool, err := pgstorage.NewPool(ctx, cfg.DatabaseDSN)
+	gormDB, err := repository.InitDB(cfg.DatabaseDSN)
 	if err != nil {
-
-		sugar.Fatalw("failed to initialize storage", "error", err)
-	}
-	store, err := pgstorage.NewStorage(ctx, pool)
-	if err != nil {
-		pool.Close()
-		sugar.Fatalw("failed to initialize storage", "error", err)
+		sugar.Fatalw("failed to initialize database", "error", err)
 	}
 
-	urlService := service.NewURLService(ctx, store)
-	h := handlers.NewHandler(urlService)
+	userRepo := repository.NewUserRepository(gormDB)
+	userService := service.NewUserService(userRepo)
+	h := handlers.NewHandler(userService)
 
 	r := chi.NewRouter()
 	r.Use(middleware.WithGzip)

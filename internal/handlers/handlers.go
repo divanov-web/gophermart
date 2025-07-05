@@ -7,7 +7,7 @@ import (
 )
 
 type Handler struct {
-	Service *service.URLService
+	Service *service.UserService
 }
 
 // DataRequest Входящие данные
@@ -20,7 +20,7 @@ type DataResponse struct {
 	Result string `json:"result"`
 }
 
-func NewHandler(svc *service.URLService) *Handler {
+func NewHandler(svc *service.UserService) *Handler {
 	return &Handler{Service: svc}
 }
 
