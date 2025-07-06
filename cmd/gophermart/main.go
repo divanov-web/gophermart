@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/divanov-web/gophermart/internal/accrual"
 	"github.com/divanov-web/gophermart/internal/config"
 	"github.com/divanov-web/gophermart/internal/handlers"
 	"github.com/divanov-web/gophermart/internal/middleware"
@@ -9,6 +10,7 @@ import (
 	"github.com/divanov-web/gophermart/internal/service"
 	"go.uber.org/zap"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -47,6 +49,9 @@ func main() {
 	orderService := service.NewOrderService(orderRepo)
 
 	h := handlers.NewHandler(userService, orderService, sugar, cfg)
+
+	accrualClient := accrual.NewClient(cfg.AccrualAddress, sugar)
+	orderService.StartOrderSenderWorker(ctx, 3*time.Second, accrualClient)
 
 	sugar.Infow(
 		"Starting server",

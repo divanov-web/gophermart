@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/divanov-web/gophermart/internal/accrual"
 	"github.com/divanov-web/gophermart/internal/model"
 	"github.com/divanov-web/gophermart/internal/repository"
 	"github.com/divanov-web/gophermart/internal/utils"
 	"gorm.io/gorm"
+	"time"
 )
 
 var (
@@ -21,7 +23,9 @@ type OrderService struct {
 }
 
 func NewOrderService(repo repository.OrderRepository) *OrderService {
-	return &OrderService{repo: repo}
+	return &OrderService{
+		repo: repo,
+	}
 }
 
 // UploadOrder загружает новый заказ
@@ -53,4 +57,40 @@ func (s *OrderService) UploadOrder(ctx context.Context, userID int64, number str
 
 func (s *OrderService) GetOrdersByUser(ctx context.Context, userID int64) ([]model.Order, error) {
 	return s.repo.GetByUserID(ctx, userID)
+}
+
+func (s *OrderService) StartOrderSenderWorker(ctx context.Context, interval time.Duration, client *accrual.Client) {
+	ticker := time.NewTicker(interval)
+	go func() {
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				s.processNewOrders(ctx, client)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (s *OrderService) processNewOrders(ctx context.Context, client *accrual.Client) {
+	orders, err := s.repo.GetByStatus(ctx, model.OrderStatusNew)
+	if err != nil {
+		// todo лог ошибки
+		return
+	}
+
+	for _, order := range orders {
+		err := client.SendOrder(order.Number)
+		if err != nil {
+			// todo лог ошибки
+			continue
+		}
+
+		// Обновляем статус заказа на PROCESSING
+		order.Status = model.OrderStatusProcessing
+		_ = s.repo.Update(ctx, &order)
+	}
 }

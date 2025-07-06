@@ -25,3 +25,4 @@ vendor/
 # Data
 *.json
 .env
+orders.txt
