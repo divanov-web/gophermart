@@ -45,3 +45,7 @@ func (s *OrderService) UploadOrder(ctx context.Context, userID int64, number str
 	}
 	return s.repo.Create(ctx, newOrder)
 }
+
+func (s *OrderService) GetOrdersByUser(ctx context.Context, userID int64) ([]model.Order, error) {
+	return s.repo.GetByUserID(ctx, userID)
+}

@@ -11,6 +11,7 @@ import (
 type OrderRepository interface {
 	Create(ctx context.Context, order *model.Order) error
 	GetByNumber(ctx context.Context, number string) (*model.Order, error)
+	GetByUserID(ctx context.Context, userID int64) ([]model.Order, error)
 }
 
 type orderRepo struct {
@@ -32,4 +33,13 @@ func (r *orderRepo) GetByNumber(ctx context.Context, number string) (*model.Orde
 		return nil, gorm.ErrRecordNotFound // это корректное поведение — заказ не найден
 	}
 	return &order, err
+}
+
+func (r *orderRepo) GetByUserID(ctx context.Context, userID int64) ([]model.Order, error) {
+	var orders []model.Order
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("uploaded_at asc").
+		Find(&orders).Error
+	return orders, err
 }

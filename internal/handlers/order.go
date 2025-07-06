@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -55,5 +56,31 @@ func (h *OrderHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusAccepted)
 	}
+}
 
+func (h *OrderHandler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	orders, err := h.service.GetOrdersByUser(r.Context(), userID)
+	if err != nil {
+		h.logger.Errorw("failed to fetch user orders", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if len(orders) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(orders); err != nil {
+		http.Error(w, "serialization error", http.StatusInternalServerError)
+	}
 }

@@ -36,6 +36,7 @@ func NewHandler(
 
 	// Order routes
 	r.Post("/api/user/orders", orderHandler.Upload)
+	r.Get("/api/user/orders", orderHandler.GetUserOrders)
 
 	return &Handler{Router: r}
 }
