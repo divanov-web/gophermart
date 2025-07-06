@@ -13,17 +13,29 @@ type Handler struct {
 }
 
 // NewHandler разводящий для хендлеров
-func NewHandler(userService *service.UserService, logger *zap.SugaredLogger, config *config.Config) *Handler {
+func NewHandler(
+	userService *service.UserService,
+	orderService *service.OrderService,
+	logger *zap.SugaredLogger,
+	config *config.Config,
+) *Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.WithGzip)
-	r.Use(middleware.WithLogging) //логирование
+	r.Use(middleware.WithLogging)
 	r.Use(middleware.WithAuth(config.AuthSecret))
 
+	// Handlers
 	userHandler := NewUserHandler(userService, logger, config)
+	orderHandler := NewOrderHandler(orderService, logger)
+
+	// User routes
 	r.Post("/api/user/register", userHandler.Register)
-	r.Post("/api/user/test", userHandler.Test)
 	r.Post("/api/user/login", userHandler.Login)
+	r.Post("/api/user/test", userHandler.Test)
+
+	// Order routes
+	r.Post("/api/user/orders", orderHandler.Upload)
 
 	return &Handler{Router: r}
 }

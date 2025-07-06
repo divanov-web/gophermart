@@ -18,7 +18,7 @@ func InitDB(dsn string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("gorm open: %w", err)
 	}
 
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Order{}); err != nil {
 		return nil, fmt.Errorf("auto-migrate: %w", err)
 	}
 

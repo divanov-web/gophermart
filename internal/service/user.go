@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+
 	"github.com/divanov-web/gophermart/internal/model"
 	"github.com/divanov-web/gophermart/internal/repository"
 	"golang.org/x/crypto/bcrypt"
@@ -19,15 +20,15 @@ func NewUserService(repo repository.UserRepository) *UserService {
 }
 
 // Register регистрирует нового пользователя
-func (s *UserService) Register(ctx context.Context, login, password string) error {
+func (s *UserService) Register(ctx context.Context, login, password string) (*model.User, error) {
 	existing, _ := s.repo.GetUserByLogin(ctx, login)
 	if existing != nil {
-		return ErrLoginTaken
+		return nil, ErrLoginTaken
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	user := &model.User{
@@ -44,8 +45,10 @@ func (s *UserService) Login(ctx context.Context, login, password string) (*model
 	if err != nil {
 		return nil, err
 	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return nil, errors.New("invalid credentials")
 	}
+
 	return user, nil
 }

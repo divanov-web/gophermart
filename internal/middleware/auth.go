@@ -14,8 +14,9 @@ const (
 
 type contextKey string
 
-const UserLoginKey contextKey = "user_login"
+const UserKey contextKey = "user_id"
 
+// WithAuth добавляет user_id в контекст, если токен валиден
 func WithAuth(secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -26,8 +27,9 @@ func WithAuth(secret string) func(http.Handler) http.Handler {
 				})
 				if err == nil && token.Valid {
 					if claims, ok := token.Claims.(jwt.MapClaims); ok {
-						if login, ok := claims["login"].(string); ok {
-							ctx := context.WithValue(r.Context(), UserLoginKey, login)
+						if userIDFloat, ok := claims["user_id"].(float64); ok {
+							userID := int64(userIDFloat)
+							ctx := context.WithValue(r.Context(), UserKey, userID)
 							r = r.WithContext(ctx)
 						}
 					}
@@ -38,10 +40,11 @@ func WithAuth(secret string) func(http.Handler) http.Handler {
 	}
 }
 
-func SetLoginCookie(w http.ResponseWriter, login, secret string) error {
+// SetLoginCookie устанавливает токен с user_id
+func SetLoginCookie(w http.ResponseWriter, userID int64, secret string) error {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"login": login,
-		"exp":   time.Now().Add(365 * 24 * time.Hour).Unix(),
+		"user_id": userID,
+		"exp":     time.Now().Add(365 * 24 * time.Hour).Unix(),
 	})
 	signed, err := token.SignedString([]byte(secret))
 	if err != nil {
@@ -57,7 +60,8 @@ func SetLoginCookie(w http.ResponseWriter, login, secret string) error {
 	return nil
 }
 
-func GetLoginFromContext(ctx context.Context) (string, bool) {
-	login, ok := ctx.Value(UserLoginKey).(string)
-	return login, ok
+// GetUserIDFromContext достаёт user_id из контекста
+func GetUserIDFromContext(ctx context.Context) (int64, bool) {
+	userID, ok := ctx.Value(UserKey).(int64)
+	return userID, ok
 }

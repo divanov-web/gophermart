@@ -25,7 +25,7 @@ func NewConfig() *Config {
 	flag.Parse()
 
 	if cfg.ServerAddress == "" {
-		cfg.ServerAddress = "localhost:8080"
+		cfg.ServerAddress = "localhost:8081"
 	}
 	if cfg.AuthSecret == "" {
 		cfg.AuthSecret = "dev-secret-key"

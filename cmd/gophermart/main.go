@@ -42,7 +42,11 @@ func main() {
 
 	userRepo := repository.NewUserRepository(gormDB)
 	userService := service.NewUserService(userRepo)
-	h := handlers.NewHandler(userService, sugar, cfg)
+
+	orderRepo := repository.NewOrderRepository(gormDB)
+	orderService := service.NewOrderService(orderRepo)
+
+	h := handlers.NewHandler(userService, orderService, sugar, cfg)
 
 	sugar.Infow(
 		"Starting server",

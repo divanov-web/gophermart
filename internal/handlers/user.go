@@ -3,10 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+	"strconv"
+
 	"github.com/divanov-web/gophermart/internal/config"
 	"github.com/divanov-web/gophermart/internal/middleware"
-	"net/http"
-
 	"github.com/divanov-web/gophermart/internal/service"
 	"go.uber.org/zap"
 )
@@ -34,12 +35,12 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
-// Test для тестирования ответа
+// Test для проверки авторизации
 func (h *UserHandler) Test(w http.ResponseWriter, r *http.Request) {
-	login, ok := middleware.GetLoginFromContext(r.Context())
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	msg := "anonymous"
 	if ok {
-		msg = "hello, " + login
+		msg = "User ID = " + strconv.FormatInt(userID, 10)
 	}
 	result := DataResponse{Result: msg}
 
@@ -59,10 +60,10 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.UserService.Register(r.Context(), req.Login, req.Password)
+	user, err := h.UserService.Register(r.Context(), req.Login, req.Password)
 	switch {
 	case err == nil:
-		_ = middleware.SetLoginCookie(w, req.Login, h.Config.AuthSecret)
+		_ = middleware.SetLoginCookie(w, user.ID, h.Config.AuthSecret)
 		w.WriteHeader(http.StatusOK)
 	case errors.Is(err, service.ErrLoginTaken):
 		http.Error(w, "login already in use", http.StatusConflict)
@@ -90,7 +91,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := middleware.SetLoginCookie(w, user.Login, h.Config.AuthSecret); err != nil {
+	if err := middleware.SetLoginCookie(w, user.ID, h.Config.AuthSecret); err != nil {
 		h.Logger.Errorw("failed to set cookie", "error", err)
 		http.Error(w, "failed to login", http.StatusInternalServerError)
 		return
