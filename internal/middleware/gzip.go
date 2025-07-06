@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"compress/gzip"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -22,6 +23,7 @@ func (w *gzipResponseWriter) WriteHeader(code int) {
 
 func WithGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Middleware Gzip triggered")
 		// проверка, поддерживает ли клиент gzip
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)

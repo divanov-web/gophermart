@@ -1,35 +1,29 @@
 package handlers
 
 import (
-	"encoding/json"
+	"github.com/divanov-web/gophermart/internal/config"
+	"github.com/divanov-web/gophermart/internal/middleware"
 	"github.com/divanov-web/gophermart/internal/service"
-	"net/http"
+	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 type Handler struct {
-	Service *service.UserService
+	Router chi.Router
 }
 
-// DataRequest Входящие данные
-type DataRequest struct {
-	URL string `json:"url"`
-}
+// NewHandler разводящий для хендлеров
+func NewHandler(userService *service.UserService, logger *zap.SugaredLogger, config *config.Config) *Handler {
+	r := chi.NewRouter()
 
-// DataResponse Исходящие данные
-type DataResponse struct {
-	Result string `json:"result"`
-}
+	r.Use(middleware.WithGzip)
+	r.Use(middleware.WithLogging) //логирование
+	r.Use(middleware.WithAuth(config.AuthSecret))
 
-func NewHandler(svc *service.UserService) *Handler {
-	return &Handler{Service: svc}
-}
+	userHandler := NewUserHandler(userService, logger, config)
+	r.Post("/api/user/register", userHandler.Register)
+	r.Post("/api/user/test", userHandler.Test)
+	r.Post("/api/user/login", userHandler.Login)
 
-func (h *Handler) UserRegister(w http.ResponseWriter, r *http.Request) {
-	result := DataResponse{Result: "success"}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(result); err != nil {
-		http.Error(w, "Ошибка сериализации ответа", http.StatusInternalServerError)
-	}
+	return &Handler{Router: r}
 }

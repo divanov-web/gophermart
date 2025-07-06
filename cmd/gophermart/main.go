@@ -7,7 +7,6 @@ import (
 	"github.com/divanov-web/gophermart/internal/middleware"
 	"github.com/divanov-web/gophermart/internal/repository"
 	"github.com/divanov-web/gophermart/internal/service"
-	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -43,13 +42,7 @@ func main() {
 
 	userRepo := repository.NewUserRepository(gormDB)
 	userService := service.NewUserService(userRepo)
-	h := handlers.NewHandler(userService)
-
-	r := chi.NewRouter()
-	r.Use(middleware.WithGzip)
-	r.Use(middleware.WithLogging) //логирование
-
-	r.Post("/api/user/register", h.UserRegister)
+	h := handlers.NewHandler(userService, sugar, cfg)
 
 	sugar.Infow(
 		"Starting server",
@@ -61,7 +54,7 @@ func main() {
 		"DatabaseDSN", cfg.DatabaseDSN,
 	)
 
-	if err := http.ListenAndServe(cfg.ServerAddress, r); err != nil {
+	if err := http.ListenAndServe(cfg.ServerAddress, h.Router); err != nil {
 		sugar.Fatalw("Server failed", "error", err)
 	}
 
