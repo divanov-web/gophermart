@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/divanov-web/gophermart/internal/model"
 	"github.com/divanov-web/gophermart/internal/repository"
+	"github.com/divanov-web/gophermart/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -25,6 +26,10 @@ func NewOrderService(repo repository.OrderRepository) *OrderService {
 
 // UploadOrder загружает новый заказ
 func (s *OrderService) UploadOrder(ctx context.Context, userID int64, number string) error {
+	if !utils.IsValidLuhn(number) {
+		return ErrInvalidOrderNumber
+	}
+
 	order, err := s.repo.GetByNumber(ctx, number)
 	if err == nil {
 		if order.UserID == userID {
