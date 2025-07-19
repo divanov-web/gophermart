@@ -3,17 +3,12 @@ package ordergen
 import (
 	"github.com/divanov-web/gophermart/internal/model"
 	"math/rand"
-	"time"
 )
 
 var (
 	types  = []string{"чайник", "плита", "кофемашина", "холодильник"}
 	brands = []string{"Bork", "Bosh", "LG"}
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 // GenerateRandomGoods случайная генерация состава заказа
 func GenerateRandomGoods() []model.OrderGoods {
