@@ -59,6 +59,7 @@ func (s *OrderService) GetOrdersByUser(ctx context.Context, userID int64) ([]mod
 	return s.repo.GetByUserID(ctx, userID)
 }
 
+// StartOrderSenderWorker Создаёт горутину, отправляет заказы в Accrual (только для локального сервера)
 func (s *OrderService) StartOrderSenderWorker(ctx context.Context, interval time.Duration, client *accrual.Client) {
 	ticker := time.NewTicker(interval)
 	go func() {
@@ -75,6 +76,7 @@ func (s *OrderService) StartOrderSenderWorker(ctx context.Context, interval time
 	}()
 }
 
+// processNewOrders Отправляет заказы в Accrual и меняет статус с NEW на PROCESSING
 func (s *OrderService) processNewOrders(ctx context.Context, client *accrual.Client) {
 	orders, err := s.repo.GetByStatus(ctx, model.OrderStatusNew)
 	if err != nil {
@@ -92,5 +94,56 @@ func (s *OrderService) processNewOrders(ctx context.Context, client *accrual.Cli
 		// Обновляем статус заказа на PROCESSING
 		order.Status = model.OrderStatusProcessing
 		_ = s.repo.Update(ctx, &order)
+	}
+}
+
+// StartAccrualUpdaterWorker Создаёт горутину, периодически проверяет статус заказа в Accrual
+func (s *OrderService) StartAccrualUpdaterWorker(ctx context.Context, interval time.Duration, client *accrual.Client) {
+	ticker := time.NewTicker(interval)
+
+	go func() {
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				s.updateProcessingOrders(ctx, client)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// updateProcessingOrders Проверяет заказы в Accrual и меняет статус с PROCESSING на INVALID или PROCESSED
+func (s *OrderService) updateProcessingOrders(ctx context.Context, client *accrual.Client) {
+	orders, err := s.repo.GetByStatus(ctx, model.OrderStatusProcessing)
+	if err != nil {
+		// TODO: лог ошибки
+		return
+	}
+
+	for _, order := range orders {
+		resp, err := client.GetOrderInfo(order.Number)
+		if err != nil || resp == nil {
+			// TODO: лог ошибки или пропуск необработанного заказа
+			continue
+		}
+
+		switch resp.Status {
+		case "REGISTERED", "PROCESSING":
+			// оставим без изменений
+			continue
+		case "PROCESSED":
+			order.Status = model.OrderStatusProcessed
+			order.Accrual = resp.Accrual
+			_ = s.repo.Update(ctx, &order)
+		case "INVALID":
+			order.Status = model.OrderStatusInvalid
+			_ = s.repo.Update(ctx, &order)
+		default:
+			// TODO: лог неизвестного статуса
+			continue
+		}
 	}
 }

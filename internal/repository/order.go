@@ -41,7 +41,7 @@ func (r *orderRepo) GetByUserID(ctx context.Context, userID int64) ([]model.Orde
 	var orders []model.Order
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
-		Order("uploaded_at asc").
+		Order("created_at asc").
 		Find(&orders).Error
 	return orders, err
 }

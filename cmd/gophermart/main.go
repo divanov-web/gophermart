@@ -52,6 +52,7 @@ func main() {
 
 	accrualClient := accrual.NewClient(cfg.AccrualAddress, sugar)
 	orderService.StartOrderSenderWorker(ctx, 3*time.Second, accrualClient)
+	orderService.StartAccrualUpdaterWorker(ctx, 5*time.Second, accrualClient)
 
 	sugar.Infow(
 		"Starting server",

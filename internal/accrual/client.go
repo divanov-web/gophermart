@@ -32,6 +32,12 @@ type AccrualRequest struct {
 	Goods []model.OrderGoods `json:"goods"`
 }
 
+type AccrualResponse struct {
+	Order   string   `json:"order"`
+	Status  string   `json:"status"`
+	Accrual *float64 `json:"accrual,omitempty"`
+}
+
 // SendOrder Отправка нового заказа на сервер accrual
 func (c *Client) SendOrder(orderNumber string) error {
 	reqBody := AccrualRequest{
@@ -71,4 +77,35 @@ func (c *Client) SendOrder(orderNumber string) error {
 	default:
 		return fmt.Errorf("unexpected status from accrual: %s", resp.Status)
 	}
+}
+
+func (c *Client) GetOrderInfo(orderNumber string) (*AccrualResponse, error) {
+	url := fmt.Sprintf("%s/api/orders/%s", c.BaseURL, orderNumber)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build accrual status request: %w", err)
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("accrual status request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNoContent {
+		return nil, nil // заказ не зарегистрирован
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status from accrual: %s", resp.Status)
+	}
+
+	var result AccrualResponse
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, fmt.Errorf("decode accrual response: %w", err)
+	}
+
+	return &result, nil
 }
