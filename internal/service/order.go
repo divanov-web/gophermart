@@ -7,6 +7,7 @@ import (
 	"github.com/divanov-web/gophermart/internal/model"
 	"github.com/divanov-web/gophermart/internal/repository"
 	"github.com/divanov-web/gophermart/internal/utils"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"time"
 )
@@ -16,15 +17,27 @@ var (
 	ErrOrderOwnedByOther       = errors.New("order already uploaded by another user")
 	ErrInvalidOrderNumber      = errors.New("wrong order number")
 	ErrOrderOwnedByAnotherUser = errors.New("wrong order owned by another user")
+	ErrInvalidWithdrawOrder    = errors.New("invalid order number format")
+	ErrInsufficientFunds       = errors.New("not enough funds")
+	ErrNegativeWithdraw        = errors.New("withdraw sum must be positive")
 )
 
 type OrderService struct {
-	repo repository.OrderRepository
+	repo     repository.OrderRepository
+	userRepo repository.UserRepository
+	logger   *zap.SugaredLogger
 }
 
-func NewOrderService(repo repository.OrderRepository) *OrderService {
+type WithdrawalRequest struct {
+	Order string  `json:"order"`
+	Sum   float64 `json:"sum"`
+}
+
+func NewOrderService(repo repository.OrderRepository, userRepo repository.UserRepository, logger *zap.SugaredLogger) *OrderService {
 	return &OrderService{
-		repo: repo,
+		repo:     repo,
+		userRepo: userRepo,
+		logger:   logger,
 	}
 }
 
@@ -137,13 +150,52 @@ func (s *OrderService) updateProcessingOrders(ctx context.Context, client *accru
 		case "PROCESSED":
 			order.Status = model.OrderStatusProcessed
 			order.Accrual = resp.Accrual
-			_ = s.repo.Update(ctx, &order)
+			if err := s.repo.Update(ctx, &order); err != nil {
+				// лог ошибки
+				continue
+			}
+			if resp.Accrual != nil {
+				err := s.userRepo.IncreaseBalance(ctx, order.UserID, *resp.Accrual)
+				if err == nil {
+					s.logger.Infow(
+						"User balance increased",
+						"userID", order.UserID,
+						"sum", *resp.Accrual,
+					)
+				} else {
+					s.logger.Errorw(
+						"Failed to increase user balance",
+						"error", err,
+					)
+				}
+			}
 		case "INVALID":
 			order.Status = model.OrderStatusInvalid
 			_ = s.repo.Update(ctx, &order)
+			s.logger.Infow(
+				"Order status invalid in accrual",
+				"OrderId", order.ID,
+			)
 		default:
 			// TODO: лог неизвестного статуса
 			continue
 		}
 	}
+}
+
+func (s *OrderService) Withdraw(ctx context.Context, userID int64, req WithdrawalRequest) error {
+	if !utils.IsValidLuhn(req.Order) {
+		return ErrInvalidWithdrawOrder
+	}
+
+	if req.Sum <= 0 {
+		return ErrNegativeWithdraw
+	}
+
+	err := s.userRepo.WithdrawBalance(ctx, userID, req.Sum, req.Order)
+	if errors.Is(err, repository.ErrLowBalance) {
+		return ErrInsufficientFunds
+	}
+
+	return err
 }

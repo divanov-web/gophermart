@@ -13,6 +13,11 @@ type UserService struct {
 	repo repository.UserRepository
 }
 
+type BalanceResponse struct {
+	Current   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
+}
+
 var ErrLoginTaken = errors.New("login already in use")
 
 func NewUserService(repo repository.UserRepository) *UserService {
@@ -51,4 +56,20 @@ func (s *UserService) Login(ctx context.Context, login, password string) (*model
 	}
 
 	return user, nil
+}
+
+func (s *UserService) GetUserBalance(ctx context.Context, userID int64) (*BalanceResponse, error) {
+	current, withdrawn, err := s.repo.GetBalance(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BalanceResponse{
+		Current:   current,
+		Withdrawn: withdrawn,
+	}, nil
+}
+
+func (s *UserService) GetWithdrawals(ctx context.Context, userID int64) ([]model.Withdrawal, error) {
+	return s.repo.GetWithdrawalsByUser(ctx, userID)
 }

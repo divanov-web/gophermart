@@ -28,6 +28,7 @@ func NewHandler(
 	// Handlers
 	userHandler := NewUserHandler(userService, logger, config)
 	orderHandler := NewOrderHandler(orderService, logger)
+	balanceHandler := NewBalanceHandler(orderService, userService, logger)
 
 	// User routes
 	r.Post("/api/user/register", userHandler.Register)
@@ -37,6 +38,11 @@ func NewHandler(
 	// Order routes
 	r.Post("/api/user/orders", orderHandler.Upload)
 	r.Get("/api/user/orders", orderHandler.GetUserOrders)
+
+	// Withdraw routes
+	r.Post("/api/user/balance/withdraw", balanceHandler.Withdraw)
+	r.Get("/api/user/balance", balanceHandler.GetBalance)
+	r.Get("/api/user/withdrawals", balanceHandler.GetWithdrawals)
 
 	return &Handler{Router: r}
 }
