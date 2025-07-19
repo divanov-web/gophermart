@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/divanov-web/gophermart/internal/accrual"
+	"github.com/divanov-web/gophermart/internal/config"
 	"github.com/divanov-web/gophermart/internal/model"
 	"github.com/divanov-web/gophermart/internal/repository"
 	"github.com/divanov-web/gophermart/internal/utils"
@@ -26,6 +27,7 @@ type OrderService struct {
 	repo     repository.OrderRepository
 	userRepo repository.UserRepository
 	logger   *zap.SugaredLogger
+	config   *config.Config
 }
 
 type WithdrawalRequest struct {
@@ -33,11 +35,12 @@ type WithdrawalRequest struct {
 	Sum   float64 `json:"sum"`
 }
 
-func NewOrderService(repo repository.OrderRepository, userRepo repository.UserRepository, logger *zap.SugaredLogger) *OrderService {
+func NewOrderService(repo repository.OrderRepository, userRepo repository.UserRepository, logger *zap.SugaredLogger, config *config.Config) *OrderService {
 	return &OrderService{
 		repo:     repo,
 		userRepo: userRepo,
 		logger:   logger,
+		config:   config,
 	}
 }
 
@@ -98,10 +101,12 @@ func (s *OrderService) processNewOrders(ctx context.Context, client *accrual.Cli
 	}
 
 	for _, order := range orders {
-		err := client.SendOrder(order.Number)
-		if err != nil {
-			// todo лог ошибки
-			continue
+		if s.config.SendOrders {
+			err := client.SendOrder(order.Number)
+			if err != nil {
+				s.logger.Errorw("failed to send order to accrual", "error", err)
+				continue
+			}
 		}
 
 		// Обновляем статус заказа на PROCESSING

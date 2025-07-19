@@ -11,6 +11,7 @@ type Config struct {
 	DatabaseDSN    string `env:"DATABASE_URI"`
 	AuthSecret     string `env:"AUTH_SECRET"`
 	AccrualAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"`
+	SendOrders     bool   `env:"SEND_ORDERS"` //Отправляет заказы в accrual, включать только локально для формирования заглушек.
 }
 
 func NewConfig() *Config {
@@ -24,6 +25,7 @@ func NewConfig() *Config {
 	flag.StringVar(&cfg.DatabaseDSN, "d", cfg.DatabaseDSN, "строка подключения к БД")
 	flag.StringVar(&cfg.AuthSecret, "auth-secret", cfg.AuthSecret, "секрет для подписи JWT")
 	flag.StringVar(&cfg.AccrualAddress, "r", cfg.AccrualAddress, "адрес системы начисления баллов accrual")
+	flag.BoolVar(&cfg.SendOrders, "send-orders", cfg.SendOrders, "включить отправку заказов в accrual-систему")
 	flag.Parse()
 
 	if cfg.ServerAddress == "" {

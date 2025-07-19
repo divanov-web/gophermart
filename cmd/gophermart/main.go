@@ -46,7 +46,7 @@ func main() {
 	userService := service.NewUserService(userRepo)
 
 	orderRepo := repository.NewOrderRepository(gormDB)
-	orderService := service.NewOrderService(orderRepo, userRepo, sugar)
+	orderService := service.NewOrderService(orderRepo, userRepo, sugar, cfg)
 
 	h := handlers.NewHandler(userService, orderService, sugar, cfg)
 
