@@ -14,13 +14,12 @@ import (
 )
 
 var (
-	ErrOrderExists             = errors.New("order already uploaded")
-	ErrOrderOwnedByOther       = errors.New("order already uploaded by another user")
-	ErrInvalidOrderNumber      = errors.New("wrong order number")
-	ErrOrderOwnedByAnotherUser = errors.New("wrong order owned by another user")
-	ErrInvalidWithdrawOrder    = errors.New("invalid order number format")
-	ErrInsufficientFunds       = errors.New("not enough funds")
-	ErrNegativeWithdraw        = errors.New("withdraw sum must be positive")
+	ErrOrderExists          = errors.New("order already uploaded")
+	ErrOrderOwnedByOther    = errors.New("order already uploaded by another user")
+	ErrInvalidOrderNumber   = errors.New("wrong order number")
+	ErrInvalidWithdrawOrder = errors.New("invalid order number format")
+	ErrInsufficientFunds    = errors.New("not enough funds")
+	ErrNegativeWithdraw     = errors.New("withdraw sum must be positive")
 )
 
 type OrderService struct {

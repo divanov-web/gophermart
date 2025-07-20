@@ -46,7 +46,7 @@ func (h *OrderHandler) Upload(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		case errors.Is(err, service.ErrInvalidOrderNumber):
 			http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
-		case errors.Is(err, service.ErrOrderOwnedByAnotherUser):
+		case errors.Is(err, service.ErrOrderOwnedByOther):
 			http.Error(w, "order already uploaded by another user", http.StatusConflict)
 		default:
 			h.logger.Errorw("upload order failed", "error", err)
